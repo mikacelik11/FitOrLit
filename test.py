@@ -1,5 +1,5 @@
 import unittest
-from main import User
+from FitOrLit.onboard import User
 from unittest.mock import Mock, patch
 
 class testClass:
