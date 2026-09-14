@@ -11,6 +11,27 @@ def test_new_username_is_accepted():
 def test_duplicate_username_is_rejected():
     store = UserStore()
     store.register('mika', '123') 
-    assert store.register('mika', '1223') is False
+    assert store.register('mika', '123') is False
+    
+def test_find_user():
+    store = UserStore()
+    store.register('luka', '123')
+    assert store.find_user('luka', '123') is True
+    
+    
+def test_login():
+    store = UserStore()
+    store.register('joe', '123')
+    assert store.login('joe', '123') is True
+    
+def test_login_duplicate():
+    store = UserStore()
+    store.register('max', '123')
+    assert store.login('joe', '123') is False
+    
+def test_logout():
+    store = UserStore()
+    checker = store.login('joe', '123')
+    assert store.logout(checker) is False
         
     

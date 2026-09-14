@@ -28,6 +28,32 @@ class UserStore:
                 print("account made")
                 return True
             print("account already exists, try again")
+       
+       
+    # finds user why searching through our user list and finding if an account matches those credentails     
+    def find_user(self, username, password):
+        for user in self.users:
+            if user.username == username and user.password == password:
+                return True
+            
+        return False
+            
+    # if user is found then login is accepted
+    def login(self, username, password):
+        if self.find_user(username, password):
+            return True
+        else:
+            return False
+        
+    # logout will take in a flag so when a user logs in the flag will be set to true so for a usr to logout their flag will need to be set to false
+    # this flag will be checked for everything else in our application.    
+    def logout(self, checker):
+        if checker == True:
+            checker = False
+            return checker
+        
+        return checker
+        
             
 
            
