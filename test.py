@@ -1,6 +1,10 @@
 
 from onboard import UserStore
 
+from calc import *
+
+# onboard.py
+
 # This test is to check if register function works and a new user is registered
 def test_new_username_is_accepted(): 
     store = UserStore()
@@ -33,5 +37,15 @@ def test_logout():
     store = UserStore()
     checker = store.login('joe', '123')
     assert store.logout(checker) is False
-        
     
+# Calc.py
+        
+def test_bmi():
+    assert bmi_calc(5, 5) == 1.0
+    
+def test_cut():
+    assert cut_cal(160) == 1900
+    
+def test_bulk():
+    assert bulk_cal(160) == 2900
+
