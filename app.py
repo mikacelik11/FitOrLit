@@ -1,36 +1,113 @@
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QAction, QIcon, QKeySequence
+import sys
+
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication,
-    QCheckBox,
+    QFormLayout, # arranges everything vertically
     QLabel,
+    QLineEdit, # creates username and password fields
     QMainWindow,
-    QStatusBar,
-    QToolBar,
+    QPushButton, # creates the login button
+    QStackedWidget,# Will eventually let you switch between login, signup, dsahboard and other pages
+    QVBoxLayout, 
+    QWidget,
 )
 
+from onboard import UserStore
+
+class LoginPage(QWidget):
+    def __init__(self, user_store, login_succeeded):
+        super().__init__()
+
+        self.user_store = user_store
+        self.login_succeeded = login_succeeded
+
+        title = QLabel("FitOrLit Login")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.username_input = QLineEdit()
+        self.username_input.setPlaceholderText("Enter your username")
+
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Enter your password")
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.message_label = QLabel()
+        self.message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.message_label.setStyleSheet("color: red;")
+
+        login_button = QPushButton("Log in")
+
+        form_layout = QFormLayout()
+        form_layout.addRow("Username:", self.username_input)
+        form_layout.addRow("Password:", self.password_input)
+
+        page_layout = QVBoxLayout(self)
+        page_layout.addStretch()
+        page_layout.addWidget(title)
+        page_layout.addLayout(form_layout)
+        page_layout.addWidget(login_button)
+        page_layout.addWidget(self.message_label)
+        page_layout.addStretch()
+
+        login_button.clicked.connect(self.attempt_login)
+        self.password_input.returnPressed.connect(self.attempt_login)
+        
+    def attempt_login(self):
+        username = self.username_input.text().strip()
+        password = self.password_input.text()
+
+        if username == "" or password == "":
+            self.message_label.setText("Please enter a username and password.")
+            return
+
+        if self.user_store.login(username, password):
+            self.message_label.clear()
+            self.password_input.clear()
+            self.login_succeeded()
+        else:
+            self.message_label.setText("Incorrect username or password.")
+            
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("My App")
 
-        label = QLabel("Hello!")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setWindowTitle("FitOrLit")
+        self.resize(500, 400)
 
-        self.setCentralWidget(label)
+        self.user_store = UserStore()
 
-        toolbar = QToolBar("My main toolbar")
-        self.addToolBar(toolbar)
+        # Temporary account for testing the login page
+        self.user_store.register("mika", "123")
 
-        button_action = QAction("Your button", self)
-        button_action.setStatusTip("This is your button")
-        button_action.triggered.connect(self.toolbar_button_clicked)
-        toolbar.addAction(button_action)
+        self.pages = QStackedWidget()
 
-    def toolbar_button_clicked(self, s):
-        print("click", s)
+        self.login_page = LoginPage(
+            self.user_store,
+            self.show_dashboard,
+        )
 
-app = QApplication([])
-window = MainWindow()
-window.show()
-app.exec()
+        self.dashboard_label = QLabel()
+        self.dashboard_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.pages.addWidget(self.login_page)
+        self.pages.addWidget(self.dashboard_label)
+
+        self.setCentralWidget(self.pages)
+
+    def show_dashboard(self):
+        current_user = self.user_store.current_user
+        self.dashboard_label.setText(
+            f"Welcome, {current_user.username}!"
+        )
+        self.pages.setCurrentWidget(self.dashboard_label)
+            
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+
+    window = MainWindow()
+    window.show()
+
+    sys.exit(app.exec())
