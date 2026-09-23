@@ -1,7 +1,14 @@
+import pytest
 
 from onboard import UserStore
-
-from calc import *
+from calc import (
+    bmi_calc,
+    bulk_cal,
+    cut_cal,
+    female_BMR,
+    maintenace_cal,
+    male_BMR,
+)
 
 # onboard.py
 
@@ -96,13 +103,31 @@ def test_logout_clears_current_user():
     assert store.is_logged_in() is False
     
 # Calc.py
-        
 def test_bmi():
-    assert bmi_calc(5, 5) == 1.0
-    
-def test_cut():
-    assert cut_cal(160) == 1900
-    
-def test_bulk():
-    assert bulk_cal(160) == 2900
+    result = bmi_calc(70, 1.75)
+    assert result == pytest.approx(22.86, abs=0.01)
 
+
+def test_male_bmr():
+    result = male_BMR(80, 180, 30)
+    assert result == 1780
+
+
+def test_female_bmr():
+    result = female_BMR(60, 165, 30)
+    assert result == 1320.25
+
+
+def test_maintenance_calories():
+    result = maintenace_cal(1780, 1.55)
+    assert result == pytest.approx(2759)
+
+
+def test_cut_calories_with_ten_percent_deficit():
+    result = cut_cal(2000, 0.10)
+    assert result == pytest.approx(1800)
+
+
+def test_bulk_calories_with_ten_percent_surplus():
+    result = bulk_cal(2000, 0.10)
+    assert result == pytest.approx(2200)
