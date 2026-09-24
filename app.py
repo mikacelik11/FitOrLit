@@ -37,6 +37,7 @@ class LoginPage(QWidget):
         self.message_label.setStyleSheet("color: red;")
 
         login_button = QPushButton("Log in")
+        signUp_button = QPushButton("Create Account")
 
         form_layout = QFormLayout()
         form_layout.addRow("Username:", self.username_input)
@@ -47,10 +48,12 @@ class LoginPage(QWidget):
         page_layout.addWidget(title)
         page_layout.addLayout(form_layout)
         page_layout.addWidget(login_button)
+        page_layout.addWidget(signUp_button)
         page_layout.addWidget(self.message_label)
         page_layout.addStretch()
 
         login_button.clicked.connect(self.attempt_login)
+        signUp_button.clicked.connect(SignUpWindow)
         self.password_input.returnPressed.connect(self.attempt_login)
         
     def attempt_login(self):
@@ -101,8 +104,43 @@ class MainWindow(QMainWindow):
             f"Welcome, {current_user.username}!"
         )
         self.pages.setCurrentWidget(self.dashboard_label)
+        
+class SignUpWindow(QWidget):
+    def __init__(self, username, password, confirmpass):
+        title = QLabel("FitOrLit Login")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        self.username_input = QLineEdit()
+        self.username_input.setPlaceholderText("Create Username:")
+        
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Enter your password")
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        
+        
             
-
+        create_button = QPushButton("Create Account")
+        
+        form_layout = QFormLayout()
+        form_layout.addRow("Username:", self.username_input)
+        form_layout.addRow("Password:", self.password_input)
+        
+        page_layout = QVBoxLayout(self)
+        page_layout.addStretch()
+        page_layout.addWidget(title)
+        page_layout.addLayout(form_layout)
+        page_layout.addWidget(create_button)
+        page_layout.addStretch()
+        
+        create_button.clicked.connect(self.attempt_create)
+        self.password_input.returnPressed.connect(self.attempt_create)
+     
+    # TODO     
+    def attempt_create(self):
+        username = self.username_input.text().strip()
+        password = self.password_input.text()
+            
+            
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
