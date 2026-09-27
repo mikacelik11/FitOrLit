@@ -1,3 +1,6 @@
+# forzen set means it cannot be accidently modified 
+SPECIAL_CHARACTERS = frozenset("!@#$%^&*()_+.")
+
 class User:
     def __init__(self, username, password):
         self.username = username
@@ -10,13 +13,27 @@ class UserStore:
         self.current_user = None
     # takes in a username and password and creates a user object and appends to list
     # of users if the username is unique
+    
+    # password must follow these set of rules, if not then an error message must be thrown so they try again
+    def password_error(self, password):
+        if not any(character in SPECIAL_CHARACTERS for character in password):
+            return "Password must contain at least 1 special characters !@#$%^&*()_+."
+        elif len(password) < 6:
+            return "Password must be at least 6 characters long"
+        
+        return None
+        
+    
     def register(self, username, password):
         for i in range(len(self.users)):
             if username == self.users[i].username:
                 return False
             
-        self.users.append(User(username, password))
-        return True
+        if self.password_error(password) is None:
+            self.users.append(User(username, password))
+            return True
+        
+        return False
         
     # prompts the user to create an account and if the username is already taken it
     # reprompts the user until they enter a valid unique username.   

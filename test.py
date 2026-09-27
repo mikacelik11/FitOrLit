@@ -23,7 +23,7 @@ def test_new_store_starts_logged_out():
 # This test is to check if register function works and a new user is registered
 def test_new_username_is_accepted(): 
     store = UserStore()
-    assert store.register('mika', '123') is True
+    assert store.register('mika', '123456@') is True
     assert len(store.users) == 1
     assert store.users[0].username == 'mika'
 
@@ -31,8 +31,8 @@ def test_new_username_is_accepted():
 # and should not be registered unless it is a unique username.  
 def test_duplicate_username_is_rejected():
     store = UserStore()
-    store.register('mika', '123') 
-    result = store.register('mika', '123')
+    store.register('mika', '123456@') 
+    result = store.register('mika', '123456@')
     
     assert result is False
     assert len(store.users) == 1
@@ -41,9 +41,9 @@ def test_duplicate_username_is_rejected():
 # this was an issue with my previous code 
 def test_partial_username_is_not_treated_as_duplicate():
     store = UserStore()
-    store.register("samantha", "123")
+    store.register("samantha", "123456@")
 
-    result = store.register("sam", "456")
+    result = store.register("sam", "123456@")
 
     assert result is True
     assert len(store.users) == 2
@@ -51,8 +51,8 @@ def test_partial_username_is_not_treated_as_duplicate():
     
 def test_find_user():
     store = UserStore()
-    store.register('luka', '123')
-    user = store.find_user('luka', '123')
+    store.register('luka', '123456@')
+    user = store.find_user('luka', '123456@')
     
     assert user is not None
     assert user.username == 'luka'
@@ -61,19 +61,19 @@ def test_find_user():
 # Make sure if username is right but the password is differen tthen we can't find the user
 def test_find_user_returns_none_for_wrong_password():
     store = UserStore()
-    store.register("luka", "123")
+    store.register("luka", "123456@")
 
-    user = store.find_user("luka", "wrong-password")
+    user = store.find_user("luka", "wrong-password#")
 
     assert user is None
     
 # make sure login is successful  and our current user is the one we logged in with
 def test_login():
     store = UserStore()
-    store.register('joe', '123')
-    expected_user = store.find_user('joe', '123')
+    store.register('joe', '123456@')
+    expected_user = store.find_user('joe', '123456@')
     
-    result = store.login('joe', '123')
+    result = store.login('joe', '123456@')
     
     assert result is True
     assert store.current_user is expected_user
@@ -82,7 +82,7 @@ def test_login():
 # test checks the login in with different password doesn't work
 def test_failed_login_does_not_set_current_user():
     store = UserStore()
-    store.register("joe", "123")
+    store.register("joe", "123456@")
 
     result = store.login("joe", "456")
 
@@ -94,8 +94,8 @@ def test_failed_login_does_not_set_current_user():
 # test log out and makes sure that if logout is called then current user is set to None.
 def test_logout_clears_current_user():
     store = UserStore()
-    store.register("joe", "123")
-    store.login("joe", "123")
+    store.register("joe", "123456@")
+    store.login("joe", "123456@")
 
     store.logout()
 
