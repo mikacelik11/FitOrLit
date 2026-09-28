@@ -52,18 +52,18 @@ def test_partial_username_is_not_treated_as_duplicate():
 def test_find_user():
     store = UserStore()
     store.register('luka', '123456@')
-    user = store.find_user('luka', '123456@')
+    user = store.find_user('luka')
     
     assert user is not None
     assert user.username == 'luka'
     
 
 # Make sure if username is right but the password is differen tthen we can't find the user
-def test_find_user_returns_none_for_wrong_password():
+def test_find_user_returns_none_for_unknown_user():
     store = UserStore()
-    store.register("luka", "123456@")
+    store.register("luka", "123457@")
 
-    user = store.find_user("luka", "wrong-password#")
+    user = store.find_user("jerry")
 
     assert user is None
     
@@ -71,7 +71,7 @@ def test_find_user_returns_none_for_wrong_password():
 def test_login():
     store = UserStore()
     store.register('joe', '123456@')
-    expected_user = store.find_user('joe', '123456@')
+    expected_user = store.find_user('joe')
     
     result = store.login('joe', '123456@')
     

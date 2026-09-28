@@ -1,10 +1,15 @@
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
+
+ph = PasswordHasher()
+
 # forzen set means it cannot be accidently modified 
 SPECIAL_CHARACTERS = frozenset("!@#$%^&*()_+.")
 
 class User:
-    def __init__(self, username, password):
+    def __init__(self, username, password_hash):
         self.username = username
-        self.password = password
+        self.password_hash = password_hash
         
 
 class UserStore:
@@ -30,7 +35,8 @@ class UserStore:
                 return False
             
         if self.password_error(password) is None:
-            self.users.append(User(username, password))
+            hash_p = ph.hash(password)
+            self.users.append(User(username, hash_p))
             return True
         
         return False
@@ -49,19 +55,26 @@ class UserStore:
        
        
     # finds user why searching through our user list and finding if an account matches those credentails     
-    def find_user(self, username, password):
+    def find_user(self, username):
         for user in self.users:
-            if user.username == username and user.password == password:
+            if user.username == username:
                 return user
             
         return None
             
-    # if user is found then login is accepted
+    # user logs in and we find the user by username because each username must be unique
+    # once a user is found we check if his hashed password is the same as the password he typed out
+    # if so current user is set else we return an error
     def login(self, username, password):
-        user = self.find_user(username, password)
+        user = self.find_user(username)
         if user is None:
             return False
-
+        
+        try:
+            ph.verify(user.password_hash, password)
+        except VerifyMismatchError:
+            return False
+            
         self.current_user = user
         return True
         
@@ -73,6 +86,8 @@ class UserStore:
     # Check if the current user is logged in
     def is_logged_in(self):
         return self.current_user is not None
+    
+
         
             
 

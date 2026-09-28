@@ -19,13 +19,17 @@ class LoginPage(QWidget):
     def __init__(self, user_store, login_succeeded, signup_requested):
         super().__init__()
 
+        # initialize the variables
         self.user_store = user_store
         self.login_succeeded = login_succeeded
         self.signup_requested = signup_requested
-
+        
+        
+        # title page aligns the text at the top in a bar manner like it does for any site opened on Mac OS
         title = QLabel("FitOrLit Login")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        # Lets users type in an input
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("Enter your username")
 
@@ -37,13 +41,16 @@ class LoginPage(QWidget):
         self.message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.message_label.setStyleSheet("color: red;")
 
+        # creates button 
         login_button = QPushButton("Log in")
         signUp_button = QPushButton("Create Account")
 
+        # Formates the inputs 
         form_layout = QFormLayout()
         form_layout.addRow("Username:", self.username_input)
         form_layout.addRow("Password:", self.password_input)
 
+        # page layout
         page_layout = QVBoxLayout(self)
         page_layout.addStretch()
         page_layout.addWidget(title)
@@ -53,10 +60,12 @@ class LoginPage(QWidget):
         page_layout.addWidget(self.message_label)
         page_layout.addStretch()
 
+        # connects the buttons with the needed functions
         login_button.clicked.connect(self.attempt_login)
         signUp_button.clicked.connect(self.signup_requested)
         self.password_input.returnPressed.connect(self.attempt_login)
-        
+    
+    # function for user to attempt login and messages the user if wrong usernamme or password is done 
     def attempt_login(self):
         username = self.username_input.text().strip()
         password = self.password_input.text()
@@ -86,6 +95,8 @@ class MainWindow(QMainWindow):
 
         self.pages = QStackedWidget()
 
+        # creates the login page  with the shared user store and callbacks
+        # for navigating to the dashboard or signup page.
         self.login_page = LoginPage(
             self.user_store,
             self.show_dashboard,
@@ -114,7 +125,7 @@ class MainWindow(QMainWindow):
             f"Welcome, {current_user.username}!"
         )
         self.pages.setCurrentWidget(self.dashboard_label)
-        
+    # these functions are needed so when we call them they can make the current page the specific thing we need.   
     def show_signup(self):
         self.pages.setCurrentWidget(self.signup_page)
         
@@ -127,12 +138,15 @@ class SignUpWindow(QWidget):
         
         super().__init__()
         
+        #initalize
         self.create_succeeded = create_succeeded
         self.user_store = user_store
+        
         
         title = QLabel("FitOrLit SignUp")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
+        # user inputs
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("Create Username:")
         
@@ -147,9 +161,11 @@ class SignUpWindow(QWidget):
         self.message_label = QLabel()
         self.message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.message_label.setStyleSheet("color: red;")
-            
+        
+        # button creation   
         create_button = QPushButton("Create Account")
         
+        # formatting
         form_layout = QFormLayout()
         form_layout.addRow("Username:", self.username_input)
         form_layout.addRow("Password:", self.password_input)
@@ -164,11 +180,11 @@ class SignUpWindow(QWidget):
         page_layout.addStretch()
         
          
-        
+        # button connecting
         create_button.clicked.connect(self.attempt_create)
         self.password_input.returnPressed.connect(self.attempt_create)
      
-    # TODO     
+    # The fuction that creates a user, the user must follow the rules of password with a len of 6 >=  and must have a special character contain in it.  
     def attempt_create(self):
         username = self.username_input.text().strip()
         password = self.password_input.text()
