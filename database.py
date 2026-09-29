@@ -33,6 +33,47 @@ def initialize_database():
     finally:
         connection.close()
         
+def create_user(username, password_hash):
+    connection = sqlite3.connect(DATABASE_PATH)
+    
+    try:
+        ## creates a new row in users, placing one value in username and another in password_hash
+        # the question marks are placeholders. the actual values are supplied separately
+        # SQLite trates those values as data rather than executable SQL
+        connection.execute(
+            """
+            INSERT INTO users (username, password_hash)
+            VALUES (?, ?)
+            """,
+            (username, password_hash),
+        )
+        # when user is successfully inserted
+        connection.commit()
+        return True
+    # rejects the insert 
+    # if you insert the same username twice then SQL raises sqlite3.integrityError
+    except sqlite3.IntegrityError:
+        return False
+    # ensures the connection is closed properly
+    finally:
+        connection.close()
+        
+def get_user_by_username(find_username):
+    connection = sqlite3.connect(DATABASE_PATH)
+    
+    try:
+        user = connection.execute(
+            """
+            SELECT * FROM users
+            WHERE username = ?
+            """,
+            (find_username,),
+        )
+        found = user.fetchone()
+        return found
+    finally:
+        connection.close()
+        
 
 if __name__ == "__main__":
     initialize_database()
