@@ -196,6 +196,7 @@ class SignUpWindow(QWidget):
         
         if password != confirm_p:
             self.message_label.setText("Passwords do not match")
+            return 
             
         if self.user_store.password_error(password):
             message = self.user_store.password_error(password)
