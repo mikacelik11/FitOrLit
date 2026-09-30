@@ -14,9 +14,11 @@ class User:
         
 
 class UserStore:
-    def __init__(self):
-        self.users = []
+    def __init__(self, database_path = database.DATABASE_PATH):
+        self.database_path = database_path
         self.current_user = None
+        
+        database.initialize_database(self.database_path)
     # takes in a username and password and creates a user object and appends to list
     # of users if the username is unique
     
@@ -32,14 +34,15 @@ class UserStore:
     # fixed register function
     def register(self, username, password):
         # call the get user in the database is a user is found this means the username is taken
-        user_exist = database.get_user_by_username(username)
+    
+        user_exist = database.get_user_by_username(username, database_path=self.database_path)
         if user_exist:
             return False
             
         # if there is now password error hash the password and then return that user was registered.
         if self.password_error(password) is None:
             hash_p = ph.hash(password)
-            user = database.create_user(username, hash_p)
+            user = database.create_user(username, hash_p, database_path=self.database_path)
             if user: 
                 return True
         
@@ -61,7 +64,7 @@ class UserStore:
     # finds user why searching through our user list and finding if an account matches those credentails     
     def find_user(self, username):
         # must call database
-        user = database.get_user_by_username(username)
+        user = database.get_user_by_username(username, database_path=self.database_path)
         if user is None:
             return None
         

@@ -11,9 +11,9 @@ from pathlib import Path
 DATABASE_PATH = Path(__file__).with_name("fitorlit.db")
 
 # initalize function
-def initialize_database():
+def initialize_database(database_path=DATABASE_PATH):
     # SQLite opens fitorlit.db if the files does exist, SQLite creates it
-    connection = sqlite3.connect(DATABASE_PATH)
+    connection = sqlite3.connect(database_path)
     # creates the table
     try:
         connection.execute(
@@ -33,8 +33,8 @@ def initialize_database():
     finally:
         connection.close()
         
-def create_user(username, password_hash):
-    connection = sqlite3.connect(DATABASE_PATH)
+def create_user(username, password_hash, database_path=DATABASE_PATH):
+    connection = sqlite3.connect(database_path)
     
     try:
         ## creates a new row in users, placing one value in username and another in password_hash
@@ -59,8 +59,8 @@ def create_user(username, password_hash):
         connection.close()
  
 # gets user by their username       
-def get_user_by_username(find_username):
-    connection = sqlite3.connect(DATABASE_PATH)
+def get_user_by_username(find_username, database_path=DATABASE_PATH):
+    connection = sqlite3.connect(database_path)
     
     # select all attributes from that user and return those with that specific username
     try:

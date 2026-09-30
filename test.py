@@ -10,47 +10,57 @@ from calc import (
     male_BMR,
 )
 
-# onboard.py
 
-def test_new_store_starts_logged_out():
-    store = UserStore()
-    
+@pytest.fixture # the function underneath prepares test data 
+def store(tmp_path):
+    # tmp_path is built into pytest. Before the test runs, pytest creates a new temperary directory
+    database_path = tmp_path / "test.db"
+    return UserStore(database_path) # this creates a userstore connected to the temp database
+
+# onboard.py
+# notice the store parameter it performs the process automatically
+# test requests store
+# pytest finds store fixture
+# fixture requests tmp_path
+# pytest creates a temp directory
+# fixture creates UserStore using test.db
+# Pytest passes that UserStore into test_login
+def test_new_store_starts_logged_out(store):
     assert store.current_user is None
     assert store.is_logged_in() is False
     
 
 
 # This test is to check if register function works and a new user is registered
-def test_new_username_is_accepted(): 
-    store = UserStore()
-    assert store.register('mika', '123456@') is True
-    assert len(store.users) == 1
-    assert store.users[0].username == 'mika'
+def test_new_username_is_accepted(store): 
+    result = store.register("mika", "123456@")
+    user = store.find_user("mika")
+
+    assert result is True
+    assert user is not None
+    assert user.username == "mika"
 
 # Now if there are duplicate username the person should be reprompted to make a different password
 # and should not be registered unless it is a unique username.  
-def test_duplicate_username_is_rejected():
-    store = UserStore()
-    store.register('mika', '123456@') 
-    result = store.register('mika', '123456@')
-    
-    assert result is False
-    assert len(store.users) == 1
+def test_duplicate_username_is_rejected(store):
+    first_result = store.register("mika", "123456@")
+    second_result = store.register("mika", "different@123")
+
+    assert first_result is True
+    assert second_result is False
+    assert store.find_user("mika") is not None
+
     
 ## make sure that partial username is treated as a duplicate 
 # this was an issue with my previous code 
-def test_partial_username_is_not_treated_as_duplicate():
-    store = UserStore()
+def test_partial_username_is_not_treated_as_duplicate(store):
     store.register("samantha", "123456@")
 
-    result = store.register("sam", "123456@")
-
-    assert result is True
-    assert len(store.users) == 2
-
+    assert store.find_user("samantha") is not None
+    assert store.find_user("sam") is None
     
-def test_find_user():
-    store = UserStore()
+def test_find_user(store):
+  
     store.register('luka', '123456@')
     user = store.find_user('luka')
     
@@ -59,8 +69,8 @@ def test_find_user():
     
 
 # Make sure if username is right but the password is differen tthen we can't find the user
-def test_find_user_returns_none_for_unknown_user():
-    store = UserStore()
+def test_find_user_returns_none_for_unknown_user(store):
+
     store.register("luka", "123457@")
 
     user = store.find_user("jerry")
@@ -68,20 +78,21 @@ def test_find_user_returns_none_for_unknown_user():
     assert user is None
     
 # make sure login is successful  and our current user is the one we logged in with
-def test_login():
-    store = UserStore()
+def test_login(store):
+
     store.register('joe', '123456@')
     expected_user = store.find_user('joe')
     
     result = store.login('joe', '123456@')
     
     assert result is True
-    assert store.current_user is expected_user
+    assert store.current_user is not None
+    assert store.current_user.username == "joe"
     assert store.is_logged_in() is True
     
 # test checks the login in with different password doesn't work
-def test_failed_login_does_not_set_current_user():
-    store = UserStore()
+def test_failed_login_does_not_set_current_user(store):
+
     store.register("joe", "123456@")
 
     result = store.login("joe", "456")
@@ -92,8 +103,8 @@ def test_failed_login_does_not_set_current_user():
 
 
 # test log out and makes sure that if logout is called then current user is set to None.
-def test_logout_clears_current_user():
-    store = UserStore()
+def test_logout_clears_current_user(store):
+
     store.register("joe", "123456@")
     store.login("joe", "123456@")
 
