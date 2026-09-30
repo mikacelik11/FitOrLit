@@ -57,10 +57,12 @@ def create_user(username, password_hash):
     # ensures the connection is closed properly
     finally:
         connection.close()
-        
+ 
+# gets user by their username       
 def get_user_by_username(find_username):
     connection = sqlite3.connect(DATABASE_PATH)
     
+    # select all attributes from that user and return those with that specific username
     try:
         user = connection.execute(
             """
@@ -69,11 +71,16 @@ def get_user_by_username(find_username):
             """,
             (find_username,),
         )
+        #fetch a single user thats why fetchone and not fetch all
+        
         found = user.fetchone()
+             
+        # fetchone either returns the user or none
         return found
     finally:
         connection.close()
         
+    
 
 if __name__ == "__main__":
     initialize_database()

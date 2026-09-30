@@ -1,5 +1,6 @@
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+import database
 
 ph = PasswordHasher()
 
@@ -28,16 +29,19 @@ class UserStore:
         
         return None
         
-    
+    # fixed register function
     def register(self, username, password):
-        for i in range(len(self.users)):
-            if username == self.users[i].username:
-                return False
+        # call the get user in the database is a user is found this means the username is taken
+        user_exist = database.get_user_by_username(username)
+        if user_exist:
+            return False
             
+        # if there is now password error hash the password and then return that user was registered.
         if self.password_error(password) is None:
             hash_p = ph.hash(password)
-            self.users.append(User(username, hash_p))
-            return True
+            user = database.create_user(username, hash_p)
+            if user: 
+                return True
         
         return False
         
@@ -56,11 +60,13 @@ class UserStore:
        
     # finds user why searching through our user list and finding if an account matches those credentails     
     def find_user(self, username):
-        for user in self.users:
-            if user.username == username:
-                return user
-            
-        return None
+        # must call database
+        user = database.get_user_by_username(username)
+        if user is None:
+            return None
+        
+        found_user = User(user[1], user[2]) # indext 1 is username index 2 is password_hash
+        return found_user
             
     # user logs in and we find the user by username because each username must be unique
     # once a user is found we check if his hashed password is the same as the password he typed out
