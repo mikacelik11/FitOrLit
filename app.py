@@ -81,6 +81,35 @@ class LoginPage(QWidget):
         else:
             self.message_label.setText("Incorrect username or password.")
             
+class HomePage(QWidget):
+    def __init__(self, user_store, logout_success):
+        super().__init__()
+        self.user_store = user_store
+        self.logout_success = logout_success
+        
+        #Title Page
+        title = QLabel("FitOrLit")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        #buttons
+        logout_button = QPushButton("Logout")
+        
+        #page layout
+        page_layout = QVBoxLayout(self)
+        page_layout.addStretch()
+        page_layout.addWidget(title)
+        page_layout.addWidget(logout_button)
+        page_layout.addStretch()
+        
+        #Connects
+        logout_button.clicked.connect(self.logout_user)
+        
+    def logout_user(self):
+        self.user_store.logout()
+        self.logout_success()
+    
+        
+            
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -99,13 +128,18 @@ class MainWindow(QMainWindow):
         # for navigating to the dashboard or signup page.
         self.login_page = LoginPage(
             self.user_store,
-            self.show_dashboard,
+            self.show_homepage,
             self.show_signup,
         )
         
         self.signup_page = SignUpWindow(
             self.user_store,
             self.show_login,
+        )
+        
+        self.home_page = HomePage (
+            self.user_store,
+            self.show_login
         )
 
         self.dashboard_label = QLabel()
@@ -115,6 +149,7 @@ class MainWindow(QMainWindow):
         # every new page must be added here so everytime a new place of the app is created it must be refrenced here (this might be in a stack)
         self.pages.addWidget(self.login_page)
         self.pages.addWidget(self.signup_page)
+        self.pages.addWidget(self.home_page)
         self.pages.addWidget(self.dashboard_label)
 
         self.setCentralWidget(self.pages)
@@ -132,6 +167,8 @@ class MainWindow(QMainWindow):
     def show_login(self):
         self.pages.setCurrentWidget(self.login_page)
         
+    def show_homepage(self):
+        self.pages.setCurrentWidget(self.home_page)
         
 class SignUpWindow(QWidget):
     def __init__(self, user_store, create_succeeded):
