@@ -107,6 +107,11 @@ class HomePage(QWidget):
     def logout_user(self):
         self.user_store.logout()
         self.logout_success()
+        
+##class UserInfo(QWidget):
+    ##def __init__(self, user_store):
+        ##super().__init__()
+        ##self.user_store = user_store
     
         
             

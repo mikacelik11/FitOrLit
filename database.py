@@ -32,6 +32,40 @@ def initialize_database(database_path=DATABASE_PATH):
     # section runs whether table creation succeeds or fails. This ensures the connection is closed properly.
     finally:
         connection.close()
+  
+# sql table that stoes all user health data     
+def user_health_data(database_path=DATABASE_PATH):
+    connection = sqlite3.connect(database_path)
+    
+    try:
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users_health_data (
+                user_id INTEGER PRIMARY KEY,
+
+                age INTEGER NOT NULL CHECK (age > 0),
+                height_cm REAL NOT NULL CHECK (height_cm > 0),
+                weight_kg REAL NOT NULL CHECK (weight_kg > 0),
+
+                activity_factor REAL NOT NULL CHECK (activity_factor > 0),
+
+                goal TEXT NOT NULL
+                    CHECK (goal IN ('maintain', 'cut', 'bulk')),
+
+                bmr_formula TEXT NOT NULL
+                    CHECK (bmr_formula IN ('male', 'female')),
+
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+            """
+        )
+        
+        connection.commit()
+        
+    finally:
+        connection.close()
         
 def create_user(username, password_hash, database_path=DATABASE_PATH):
     connection = sqlite3.connect(database_path)
