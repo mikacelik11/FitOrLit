@@ -1,4 +1,8 @@
+import sqlite3
+
 import pytest
+
+import database
 
 from onboard import UserStore
 from calc import (
@@ -112,6 +116,322 @@ def test_logout_clears_current_user(store):
 
     assert store.current_user is None
     assert store.is_logged_in() is False
+
+
+# database.py: partial health profiles
+@pytest.fixture
+def health_user(store):
+    assert store.register("health_user", "123456@") is True
+    assert store.login("health_user", "123456@") is True
+    return store.current_user
+
+
+def test_logged_in_user_has_database_id(store, health_user):
+    row = database.get_user_by_username("health_user", store.database_path)
+    assert health_user.id == row[0]
+
+
+def test_age_can_be_saved_without_other_answers(store, health_user):
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        row = connection.execute(
+            """
+            SELECT user_id, age, height_cm, weight_kg,
+                   activity_factor, goal, bmr_formula, created_at
+            FROM users_health_data WHERE user_id = ?
+            """,
+            (health_user.id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert row[:7] == (health_user.id, 25, None, None, None, None, None)
+    assert row[7] is not None
+
+
+def test_saving_age_again_updates_only_that_answer(store, health_user):
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+    assert database.save_health_data(
+        health_user.id, store.database_path, height_cm=175.5, weight_kg=70.5
+    ) is True
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        created_at = connection.execute(
+            "SELECT created_at FROM users_health_data WHERE user_id = ?",
+            (health_user.id,),
+        ).fetchone()[0]
+    finally:
+        connection.close()
+
+    assert database.save_health_data(health_user.id, store.database_path, age=26) is True
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        rows = connection.execute(
+            "SELECT user_id, age, height_cm, weight_kg, created_at FROM users_health_data"
+        ).fetchall()
+    finally:
+        connection.close()
+
+    assert rows == [(health_user.id, 26, 175.5, 70.5, created_at)]
+
+
+@pytest.mark.parametrize("age", [0, -1, 25.5, "25", "abc", True, None])
+def test_invalid_age_does_not_overwrite_saved_age(store, health_user, age):
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+    assert database.save_health_data(health_user.id, store.database_path, age=age) is False
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        row = connection.execute(
+            "SELECT age FROM users_health_data WHERE user_id = ?",
+            (health_user.id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert row == (25,)
+
+
+@pytest.mark.parametrize("user_id", [None, True, "1", 0, -1, 1.5, 999999])
+def test_health_data_cannot_be_saved_for_invalid_or_unknown_user(store, health_user, user_id):
+    assert database.save_health_data(user_id, store.database_path, age=25) is False
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        count = connection.execute("SELECT COUNT(*) FROM users_health_data").fetchone()[0]
+    finally:
+        connection.close()
+
+    assert count == 0
+
+
+def test_age_is_saved_to_the_correct_user(store, health_user):
+    assert store.register("second_user", "123456@") is True
+    second_user = store.find_user("second_user")
+
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+    assert database.save_health_data(second_user.id, store.database_path, age=40) is True
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        rows = connection.execute(
+            "SELECT user_id, age FROM users_health_data ORDER BY user_id"
+        ).fetchall()
+    finally:
+        connection.close()
+
+    assert rows == [(health_user.id, 25), (second_user.id, 40)]
+
+
+def test_health_initialization_preserves_existing_answers(store, health_user):
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+
+    database.initialize_database(store.database_path)
+    reopened_store = UserStore(store.database_path)
+    assert reopened_store.login("health_user", "123456@") is True
+    assert reopened_store.current_user.id == health_user.id
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        row = connection.execute(
+            "SELECT age FROM users_health_data WHERE user_id = ?",
+            (health_user.id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert row == (25,)
+
+
+@pytest.mark.parametrize(
+    "field, value, column_index",
+    [
+        ("age", 25, 0),
+        ("height_cm", 175.5, 1),
+        ("weight_kg", 70.5, 2),
+        ("activity_factor", 1.55, 3),
+        ("goal", "cut", 4),
+        ("bmr_formula", "female", 5),
+    ],
+)
+def test_any_single_answer_can_start_a_profile(store, health_user, field, value, column_index):
+    assert database.save_health_data(
+        health_user.id, store.database_path, **{field: value}
+    ) is True
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        row = connection.execute(
+            """
+            SELECT age, height_cm, weight_kg, activity_factor, goal, bmr_formula
+            FROM users_health_data WHERE user_id = ?
+            """,
+            (health_user.id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    expected = [None] * 6
+    expected[column_index] = value
+    assert row == tuple(expected)
+
+
+def test_health_answers_can_be_saved_one_at_a_time(store, health_user):
+    answers = {
+        "age": 25,
+        "height_cm": 175.5,
+        "weight_kg": 70.5,
+        "activity_factor": 1.55,
+        "goal": "maintain",
+        "bmr_formula": "male",
+    }
+    for field, value in answers.items():
+        assert database.save_health_data(
+            health_user.id, store.database_path, **{field: value}
+        ) is True
+
+    # Revising later answers must not erase the earlier ones.
+    assert database.save_health_data(
+        health_user.id, store.database_path, weight_kg=71.5, goal="bulk"
+    ) is True
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        rows = connection.execute(
+            """
+            SELECT user_id, age, height_cm, weight_kg, activity_factor, goal, bmr_formula
+            FROM users_health_data
+            """
+        ).fetchall()
+    finally:
+        connection.close()
+
+    assert rows == [(health_user.id, 25, 175.5, 71.5, 1.55, "bulk", "male")]
+
+
+def test_all_health_answers_can_be_saved_together(store, health_user):
+    assert database.save_health_data(
+        health_user.id,
+        database_path=store.database_path,
+        age=25,
+        height_cm=175,
+        weight_kg=70,
+        activity_factor=1.55,
+        goal="cut",
+        bmr_formula="female",
+    ) is True
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        row = connection.execute(
+            """
+            SELECT age, height_cm, weight_kg, activity_factor, goal, bmr_formula
+            FROM users_health_data WHERE user_id = ?
+            """,
+            (health_user.id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert row == (25, 175, 70, 1.55, "cut", "female")
+
+
+def test_none_skips_an_answer_instead_of_erasing_it(store, health_user):
+    assert database.save_health_data(
+        health_user.id, store.database_path, age=25, goal="maintain"
+    ) is True
+    assert database.save_health_data(
+        health_user.id, store.database_path, age=None, goal=None, height_cm=175.5
+    ) is True
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        row = connection.execute(
+            "SELECT age, height_cm, goal FROM users_health_data WHERE user_id = ?",
+            (health_user.id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert row == (25, 175.5, "maintain")
+
+
+def test_saving_without_answers_does_not_create_a_profile(store, health_user):
+    assert database.save_health_data(health_user.id, store.database_path) is False
+    assert database.save_health_data(
+        health_user.id, store.database_path,
+        age=None, height_cm=None, weight_kg=None,
+        activity_factor=None, goal=None, bmr_formula=None,
+    ) is False
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        count = connection.execute("SELECT COUNT(*) FROM users_health_data").fetchone()[0]
+    finally:
+        connection.close()
+
+    assert count == 0
+
+
+@pytest.mark.parametrize(
+    "invalid_answers",
+    [
+        {"age": 0},
+        {"age": 25.5},
+        {"age": True},
+        {"age": 2 ** 63},
+        {"height_cm": 0},
+        {"height_cm": -175},
+        {"height_cm": "175"},
+        {"height_cm": True},
+        {"height_cm": float("nan")},
+        {"height_cm": float("inf")},
+        {"height_cm": 2 ** 63},
+        {"weight_kg": -1},
+        {"weight_kg": "70"},
+        {"weight_kg": False},
+        {"weight_kg": float("nan")},
+        {"weight_kg": float("inf")},
+        {"activity_factor": 0},
+        {"activity_factor": "1.55"},
+        {"activity_factor": True},
+        {"activity_factor": float("nan")},
+        {"activity_factor": float("inf")},
+        {"goal": "unknown"},
+        {"goal": ""},
+        {"goal": ["cut"]},
+        {"bmr_formula": "unknown"},
+        {"bmr_formula": 1},
+        {"bmr_formula": ["male"]},
+    ],
+)
+def test_invalid_health_answer_rejects_the_entire_save(store, health_user, invalid_answers):
+    assert database.save_health_data(
+        health_user.id, store.database_path, age=25, goal="maintain"
+    ) is True
+
+    # Even the valid age/goal changes must not be saved alongside a bad answer.
+    answers = {"age": 26, "goal": "bulk", **invalid_answers}
+    assert database.save_health_data(
+        health_user.id, store.database_path, **answers
+    ) is False
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        rows = connection.execute(
+            """
+            SELECT user_id, age, height_cm, weight_kg, activity_factor, goal, bmr_formula
+            FROM users_health_data
+            """
+        ).fetchall()
+    finally:
+        connection.close()
+
+    assert rows == [(health_user.id, 25, None, None, None, "maintain", None)]
     
 # Calc.py
 def test_bmi():

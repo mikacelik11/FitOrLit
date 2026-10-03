@@ -8,7 +8,8 @@ ph = PasswordHasher()
 SPECIAL_CHARACTERS = frozenset("!@#$%^&*()_+.")
 
 class User:
-    def __init__(self, username, password_hash):
+    def __init__(self, user_id, username, password_hash):
+        self.id = user_id
         self.username = username
         self.password_hash = password_hash
         
@@ -68,7 +69,8 @@ class UserStore:
         if user is None:
             return None
         
-        found_user = User(user[1], user[2]) # indext 1 is username index 2 is password_hash
+        # The database row contains the account ID, username, and password hash.
+        found_user = User(user[0], user[1], user[2])
         return found_user
             
     # user logs in and we find the user by username because each username must be unique
@@ -95,13 +97,3 @@ class UserStore:
     # Check if the current user is logged in
     def is_logged_in(self):
         return self.current_user is not None
-    
-
-        
-            
-
-           
-        
-
-
-    
