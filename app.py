@@ -1,5 +1,5 @@
 import sys
-
+import database
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication,
@@ -82,37 +82,98 @@ class LoginPage(QWidget):
             self.message_label.setText("Incorrect username or password.")
             
 class HomePage(QWidget):
-    def __init__(self, user_store, logout_success):
+    def __init__(self, user_store, logout_success, profile_requested):
         super().__init__()
         self.user_store = user_store
         self.logout_success = logout_success
+        self.profile_requested = profile_requested
         
         #Title Page
         title = QLabel("FitOrLit")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         #buttons
+        profile = QPushButton("Proflie")
         logout_button = QPushButton("Logout")
         
         #page layout
         page_layout = QVBoxLayout(self)
         page_layout.addStretch()
         page_layout.addWidget(title)
+        page_layout.addWidget(profile)
         page_layout.addWidget(logout_button)
         page_layout.addStretch()
         
         #Connects
         logout_button.clicked.connect(self.logout_user)
+        profile.clicked.connect(self.profile_requested)
         
     def logout_user(self):
         self.user_store.logout()
         self.logout_success()
+        
+
+    
+    #def user_profile(self):
+        
   
         
-##class UserInfo(QWidget):
-    ##def __init__(self, user_store):
-        ##super().__init__()
-        ##self.user_store = user_store
+class UserProfile(QWidget):
+    def __init__(self, user_store, back_requested):
+        super().__init__()
+        self.user_store = user_store
+        self.back_requested = back_requested
+        
+        self.age_input = QLineEdit()
+        self.age_input.setPlaceholderText("Enter your age")
+        self.load_health_data()
+        
+        
+        self.age_input = QLineEdit()
+        self.age_input.setPlaceholderText("Enter your age")
+        
+        #title page
+        title = QLabel("FitOrLit")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        #button
+        back = QPushButton("Back")
+        save_button = QPushButton("save")
+        
+       #page layout
+        page_layout = QVBoxLayout(self)
+        page_layout.addStretch()
+        page_layout.addWidget(title)
+        page_layout.addWidget(self.age_input)
+        page_layout.addWidget(back)
+        
+        page_layout.addWidget(save_button)
+        page_layout.addStretch()
+               
+        #Connects
+        back.clicked.connect(self.back_requested)
+
+    
+    def load_health_data(self):
+        # clear any answers left over from a previous user.
+        self.age_input.clear()
+        
+        # check if current user is set
+        user = self.user_store.current_user
+        if user is None:
+            return
+        # connect to the datavase and get the id to check for health data
+        profile = database.get_health_data(
+            user.id,
+            database_path=self.user_store.database_path, 
+        )
+        # profile was found and there is health data
+        if profile is not None:
+            age = profile[1]
+            # if age is enter set it as a text instead of an placeholder 
+            if age is not None:
+                self.age_input.setText(str(age))
+                
     
         
             
@@ -124,6 +185,7 @@ class MainWindow(QMainWindow):
         self.resize(500, 400)
 
         self.user_store = UserStore()
+        
 
         # Temporary account for testing the login page
         self.user_store.register("mika", "123")
@@ -145,7 +207,13 @@ class MainWindow(QMainWindow):
         
         self.home_page = HomePage (
             self.user_store,
-            self.show_login
+            self.show_login,
+            self.show_profile
+        )
+        
+        self.user_profile = UserProfile(
+            self.user_store,
+            self.show_homepage
         )
 
         self.dashboard_label = QLabel()
@@ -156,6 +224,7 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self.login_page)
         self.pages.addWidget(self.signup_page)
         self.pages.addWidget(self.home_page)
+        self.pages.addWidget(self.user_profile)
         self.pages.addWidget(self.dashboard_label)
 
         self.setCentralWidget(self.pages)
@@ -175,6 +244,13 @@ class MainWindow(QMainWindow):
         
     def show_homepage(self):
         self.pages.setCurrentWidget(self.home_page)
+        
+    def show_profile(self):
+        if self.user_store.current_user is None:
+            self.show_login()
+            return
+        self.user_profile.load_health_data()
+        self.pages.setCurrentWidget(self.user_profile)
         
 class SignUpWindow(QWidget):
     def __init__(self, user_store, create_succeeded):
