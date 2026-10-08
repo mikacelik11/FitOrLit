@@ -129,6 +129,8 @@ def health_user(store):
 def test_logged_in_user_has_database_id(store, health_user):
     row = database.get_user_by_username("health_user", store.database_path)
     assert health_user.id == row[0]
+    
+
 
 
 def test_age_can_be_saved_without_other_answers(store, health_user):
@@ -433,6 +435,117 @@ def test_invalid_health_answer_rejects_the_entire_save(store, health_user, inval
 
     assert rows == [(health_user.id, 25, None, None, None, "maintain", None)]
     
+# get_health_data: loading saved profiles
+def test_get_health_data_returns_none_before_any_answers(store, health_user):
+    # The account exists, but its health profile has not been created yet.
+    profile = database.get_health_data(health_user.id, store.database_path)
+
+    assert profile is None
+
+
+def test_get_health_data_returns_none_for_unknown_user(store, health_user):
+    # Another saved profile must not be returned for an unknown user ID.
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+
+    profile = database.get_health_data(999999, store.database_path)
+
+    assert profile is None
+
+
+def test_get_health_data_returns_age_only_profile(store, health_user):
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+
+    profile = database.get_health_data(health_user.id, store.database_path)
+
+    assert isinstance(profile, tuple)
+    assert len(profile) == 8
+    # Row order: user ID, age, height, weight, activity, goal, formula, timestamp.
+    assert profile[:7] == (health_user.id, 25, None, None, None, None, None)
+    assert isinstance(profile[7], str)
+    assert profile[7]  # The creation timestamp should not be empty.
+
+
+def test_get_health_data_returns_complete_profile(store, health_user):
+    assert database.save_health_data(
+        health_user.id,
+        database_path=store.database_path,
+        age=25,
+        height_cm=175.5,
+        weight_kg=70.5,
+        activity_factor=1.55,
+        goal="cut",
+        bmr_formula="female",
+    ) is True
+
+    profile = database.get_health_data(health_user.id, store.database_path)
+
+    assert profile is not None
+    assert profile[:7] == (health_user.id, 25, 175.5, 70.5, 1.55, "cut", "female")
+
+
+def test_get_health_data_keeps_users_profiles_separate(store, health_user):
+    assert store.register("second_user", "123456@") is True
+    second_user = store.find_user("second_user")
+    assert second_user is not None
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+    assert database.save_health_data(
+        second_user.id, store.database_path, age=40, height_cm=180
+    ) is True
+
+    first_profile = database.get_health_data(health_user.id, store.database_path)
+    second_profile = database.get_health_data(second_user.id, store.database_path)
+
+    assert first_profile is not None
+    assert second_profile is not None
+    assert first_profile[:7] == (health_user.id, 25, None, None, None, None, None)
+    assert second_profile[:7] == (second_user.id, 40, 180, None, None, None, None)
+
+
+def test_get_health_data_returns_updated_answers(store, health_user):
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+    original_profile = database.get_health_data(health_user.id, store.database_path)
+    assert original_profile is not None
+
+    assert database.save_health_data(
+        health_user.id, store.database_path, age=26, height_cm=175.5
+    ) is True
+    updated_profile = database.get_health_data(health_user.id, store.database_path)
+
+    assert updated_profile is not None
+    assert updated_profile[:7] == (health_user.id, 26, 175.5, None, None, None, None)
+    assert updated_profile[7] == original_profile[7]
+
+
+def test_get_health_data_reads_the_requested_database(store, health_user, tmp_path):
+    other_store = UserStore(tmp_path / "other.db")
+    assert other_store.register("health_user", "123456@") is True
+    other_user = other_store.find_user("health_user")
+    assert other_user is not None
+    # IDs can be the same in different databases, but their answers can differ.
+    assert other_user.id == health_user.id
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+    assert database.save_health_data(other_user.id, other_store.database_path, age=40) is True
+
+    first_profile = database.get_health_data(health_user.id, store.database_path)
+    other_profile = database.get_health_data(other_user.id, other_store.database_path)
+
+    assert first_profile is not None
+    assert other_profile is not None
+    assert first_profile[1] == 25
+    assert other_profile[1] == 40
+
+
+def test_get_health_data_loads_answers_after_reopening_store(store, health_user):
+    assert database.save_health_data(health_user.id, store.database_path, age=25) is True
+    expected_profile = database.get_health_data(health_user.id, store.database_path)
+    assert expected_profile is not None
+
+    reopened_store = UserStore(store.database_path)
+    profile = database.get_health_data(health_user.id, reopened_store.database_path)
+
+    assert profile == expected_profile
+
+
 # Calc.py
 def test_bmi():
     result = bmi_calc(70, 1.75)

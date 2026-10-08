@@ -182,6 +182,8 @@ def get_health_data(user_id, database_path=DATABASE_PATH):
             WHERE user_id = ?
             ''',
             # trailing comma so SQLite recieves a sequence containing one parameter
+            # creates a tuple with the id, and the reason we want a tuple is because pythons SQLite execute() method expects a collection
+            # of paramter values, even when thers only one
             (user_id,),
         )
         
