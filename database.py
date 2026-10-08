@@ -167,6 +167,29 @@ def save_health_data(
 
     finally:
         connection.close()
+  
+# this is how this function should work
+# 1. receive the users id and database path
+# find their row in users_health_data
+# return that row or None if they haven't saved any answers yet      
+def get_health_data(user_id, database_path=DATABASE_PATH):
+    connection = sqlite3.connect(database_path)
+    
+    try:
+        data = connection.execute(
+            '''
+            SELECT * FROM users_health_data
+            WHERE user_id = ?
+            ''',
+            # trailing comma so SQLite recieves a sequence containing one parameter
+            (user_id,),
+        )
+        
+        found = data.fetchone()
+        
+        return found
+    finally:
+        connection.close()
 
 def create_user(username, password_hash, database_path=DATABASE_PATH):
     connection = sqlite3.connect(database_path)
