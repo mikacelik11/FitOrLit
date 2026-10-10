@@ -124,6 +124,8 @@ class UserProfile(QWidget):
         self.user_store = user_store
         self.back_requested = back_requested
         
+        self.message_label = QLabel()
+        
         self.age_input = QLineEdit()
         self.age_input.setPlaceholderText("Enter your age")
         self.load_health_data()
@@ -148,10 +150,12 @@ class UserProfile(QWidget):
         page_layout.addWidget(back)
         
         page_layout.addWidget(save_button)
+        page_layout.addWidget(self.message_label)
         page_layout.addStretch()
                
         #Connects
         back.clicked.connect(self.back_requested)
+        save_button.clicked.connect(self.save_health_info)
 
     
     def load_health_data(self):
@@ -173,6 +177,44 @@ class UserProfile(QWidget):
             # if age is enter set it as a text instead of an placeholder 
             if age is not None:
                 self.age_input.setText(str(age))
+                
+    def save_health_info(self):
+        self.message_label.clear()
+    
+        user = self.user_store.current_user
+        
+        if user is None:
+            self.message_label.setText("Please log in first.")
+            return
+        
+        age_text = self.age_input.text().strip()
+        
+        if age_text == "":
+            self.message_label.setText("No age entered. Nothing was saved")
+            return
+        
+        try:
+            age = int(age_text)
+        except ValueError:
+            self.message_label.setText("Age must be a whole number.")
+            return
+        
+        if age <= 0:
+            self.message_label.setText("Age must be greater than zero.")
+            return
+        
+        
+            
+        saved = database.save_health_data(
+            user.id,
+            database_path=self.user_store.database_path,
+            age = age,
+        )
+        
+        if saved:
+            self.message_label.setText("Age saved!")
+        else:
+            self.message_label.setText("Age could not be saved.")
                 
     
         
