@@ -126,11 +126,8 @@ class UserProfile(QWidget):
         
         self.message_label = QLabel()
         
-        self.age_input = QLineEdit()
-        self.age_input.setPlaceholderText("Enter your age")
-        self.load_health_data()
         
-        
+            
         self.age_input = QLineEdit()
         self.age_input.setPlaceholderText("Enter your age")
         
@@ -160,6 +157,7 @@ class UserProfile(QWidget):
     
     def load_health_data(self):
         # clear any answers left over from a previous user.
+        self.message_label.clear()
         self.age_input.clear()
         
         # check if current user is set
@@ -179,32 +177,36 @@ class UserProfile(QWidget):
                 self.age_input.setText(str(age))
                 
     def save_health_info(self):
+        # clears message that was left from previous user 
         self.message_label.clear()
-    
+        
+        # gets the current user
         user = self.user_store.current_user
         
+        # is user is None that means a current user wasn't set thus they must log in first
         if user is None:
             self.message_label.setText("Please log in first.")
             return
         
         age_text = self.age_input.text().strip()
         
+        # look if user input something in the age section 
         if age_text == "":
             self.message_label.setText("No age entered. Nothing was saved")
             return
-        
+        # turn age as an integer this will be saved in our database as an integer
         try:
             age = int(age_text)
         except ValueError:
             self.message_label.setText("Age must be a whole number.")
             return
-        
+        # age must be a positiive integer
         if age <= 0:
             self.message_label.setText("Age must be greater than zero.")
             return
         
         
-            
+        # current users id, the database it will be saved to, and the age they input  
         saved = database.save_health_data(
             user.id,
             database_path=self.user_store.database_path,
@@ -241,18 +243,19 @@ class MainWindow(QMainWindow):
             self.show_homepage,
             self.show_signup,
         )
-        
+        # creates the signup page and shows the login page if user has already made an account 
         self.signup_page = SignUpWindow(
             self.user_store,
             self.show_login,
         )
-        
+        # homepage and all the navigations it comes with
         self.home_page = HomePage (
             self.user_store,
             self.show_login,
             self.show_profile
         )
         
+        # User profile with the option to go back to  homepage 
         self.user_profile = UserProfile(
             self.user_store,
             self.show_homepage
