@@ -1,4 +1,6 @@
 import sys
+from math import isfinite
+
 import database
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -130,6 +132,9 @@ class UserProfile(QWidget):
             
         self.age_input = QLineEdit()
         self.age_input.setPlaceholderText("Enter your age")
+
+        self.height_input = QLineEdit()
+        self.height_input.setPlaceholderText("Enter your height in centimeters")
         
         #title page
         title = QLabel("FitOrLit")
@@ -144,6 +149,8 @@ class UserProfile(QWidget):
         page_layout.addStretch()
         page_layout.addWidget(title)
         page_layout.addWidget(self.age_input)
+        page_layout.addWidget(QLabel("Height (cm)"))
+        page_layout.addWidget(self.height_input)
         page_layout.addWidget(back)
         
         page_layout.addWidget(save_button)
@@ -159,6 +166,7 @@ class UserProfile(QWidget):
         # clear any answers left over from a previous user.
         self.message_label.clear()
         self.age_input.clear()
+        self.height_input.clear()
         
         # check if current user is set
         user = self.user_store.current_user
@@ -172,9 +180,13 @@ class UserProfile(QWidget):
         # profile was found and there is health data
         if profile is not None:
             age = profile[1]
+            height_cm = profile[2]
             # if age is enter set it as a text instead of an placeholder 
             if age is not None:
                 self.age_input.setText(str(age))
+
+            if height_cm is not None:
+                self.height_input.setText(str(height_cm))
                 
     def save_health_info(self):
         # clears message that was left from previous user 
@@ -189,34 +201,49 @@ class UserProfile(QWidget):
             return
         
         age_text = self.age_input.text().strip()
+        height_text = self.height_input.text().strip()
         
-        # look if user input something in the age section 
-        if age_text == "":
-            self.message_label.setText("No age entered. Nothing was saved")
+        # Either answer can be skipped, but there must be something to save.
+        if age_text == "" and height_text == "":
+            self.message_label.setText("No answers entered. Nothing was saved.")
             return
-        # turn age as an integer this will be saved in our database as an integer
-        try:
-            age = int(age_text)
-        except ValueError:
-            self.message_label.setText("Age must be a whole number.")
-            return
-        # age must be a positiive integer
-        if age <= 0:
-            self.message_label.setText("Age must be greater than zero.")
-            return
-        
-        
-        # current users id, the database it will be saved to, and the age they input  
+
+        age = None
+        if age_text != "":
+            # Age must still be a positive whole number when supplied.
+            try:
+                age = int(age_text)
+            except ValueError:
+                self.message_label.setText("Age must be a whole number.")
+                return
+            if age <= 0:
+                self.message_label.setText("Age must be greater than zero.")
+                return
+
+        height_cm = None
+        if height_text != "":
+            # Height can include decimals, but cannot be NaN or infinity.
+            try:
+                height_cm = float(height_text)
+            except ValueError:
+                self.message_label.setText("Height must be a number in centimeters.")
+                return
+            if not isfinite(height_cm) or height_cm <= 0:
+                self.message_label.setText("Height must be a finite number greater than zero.")
+                return
+
+        # Save supplied answers together. None leaves an existing answer unchanged.
         saved = database.save_health_data(
             user.id,
             database_path=self.user_store.database_path,
-            age = age,
+            age=age,
+            height_cm=height_cm,
         )
         
         if saved:
-            self.message_label.setText("Age saved!")
+            self.message_label.setText("Health data saved!")
         else:
-            self.message_label.setText("Age could not be saved.")
+            self.message_label.setText("Health data could not be saved.")
                 
     
         
